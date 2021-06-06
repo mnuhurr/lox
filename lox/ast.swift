@@ -18,6 +18,7 @@ protocol Stmt {
 }
 
 protocol ExprVisitor {
+    func visitAssignExpr(assign: LoxAst.Assign) throws -> Any?
     func visitBinaryExpr(binary: LoxAst.Binary) throws -> Any?
     func visitGroupingExpr(grouping: LoxAst.Grouping) throws -> Any?
     func visitLiteralExpr(literal: LoxAst.Literal) throws -> Any?
@@ -26,6 +27,7 @@ protocol ExprVisitor {
 }
 
 protocol StmtVisitor {
+    func visitBlock(block: LoxAst.Block) throws -> Any?
     func visitPrintStmt(printStmt: LoxAst.PrintStmt) throws -> Any?
     func visitExprStmt(exprStmt: LoxAst.ExpressionStmt) throws -> Any?
     func visitVarStmt(varStmt: LoxAst.VarStmt) throws -> Any?
@@ -34,6 +36,20 @@ protocol StmtVisitor {
 struct LoxAst {
     // prevent creating a LoxAst object
     private init() { }
+    
+    class Assign: Expr {
+        let name: Token
+        let value: Expr
+        
+        init(name: Token, value: Expr) {
+            self.name = name
+            self.value = value
+        }
+        
+        func accept(visitor: ExprVisitor) throws -> Any? {
+            return try visitor.visitAssignExpr(assign: self)
+        }
+    }
     
     class Binary: Expr {
         let left: Expr
@@ -110,6 +126,18 @@ struct LoxAst {
         
         func accept(visitor: StmtVisitor) throws -> Any? {
             return try visitor.visitExprStmt(exprStmt: self)
+        }
+    }
+    
+    class Block: Stmt {
+        let statements: [Stmt]
+        
+        init(statements: [Stmt]) {
+            self.statements = statements
+        }
+        
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitBlock(block: self)
         }
     }
     

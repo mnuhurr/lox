@@ -66,6 +66,12 @@ class Interpreter: ExprVisitor, StmtVisitor {
         }
     }
     
+    func visitAssignExpr(assign: LoxAst.Assign) throws -> Any? {
+        let value = try evaluate(expr: assign.value)
+        try environment.assign(name: assign.name, value: value)
+        return value;
+    }
+    
     func visitBinaryExpr(binary: LoxAst.Binary) throws -> Any? {
         let left = try evaluate(expr: binary.left)
         let right = try evaluate(expr: binary.right)
@@ -237,5 +243,25 @@ class Interpreter: ExprVisitor, StmtVisitor {
         
         environment.define(name: varStmt.name.lexeme, value: value)
         return nil
+    }
+    
+    func visitBlock(block: LoxAst.Block) throws -> Any? {
+        executeBlock(statements: block.statements, environment: Environment(enclosing: environment))
+        return nil
+    }
+    
+    func executeBlock(statements: [Stmt], environment: Environment) {
+        let previous: Environment = self.environment
+        
+        do {
+            self.environment = environment
+            for stmt in statements {
+                let _ = try execute(stmt: stmt)
+            }
+        } catch {
+            // ??
+        }
+        
+        self.environment = previous
     }
 }

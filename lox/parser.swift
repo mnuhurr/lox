@@ -74,7 +74,25 @@ class Parser {
     }
     
     func expression() throws -> Expr {
-        return try equality()
+        return try assignment()
+    }
+    
+    func assignment() throws -> Expr {
+        let expr = try equality()
+        
+        if match(TokenType.equal) {
+            let equals = previous()
+            let value = try assignment()
+            
+            if let varExpr = expr as? LoxAst.Variable {
+                return LoxAst.Assign(name: varExpr.name, value: value)
+            } else {
+                // not a big deal, no need to throw, just report
+                let _ = error(token: equals, message: "Invalid assignment target.")
+            }
+        }
+        
+        return expr
     }
     
     func equality() throws -> Expr {
@@ -163,6 +181,11 @@ class Parser {
             return try printStatement()
         }
         
+        if match(TokenType.left_brace) {
+            let stmts = try block()
+            return LoxAst.Block(statements: stmts)
+        }
+        
         return try expressionStatement()
     }
     
@@ -176,6 +199,20 @@ class Parser {
         let expr: Expr = try expression()
         let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after value.")
         return LoxAst.ExpressionStmt(expr: expr)
+    }
+    
+    func block() throws -> [Stmt] {
+        var statements: [Stmt] = []
+        
+        while !check(type: TokenType.right_brace) && !isAtEnd() {
+            let stmt = try declaration()
+            if stmt != nil {
+                statements.append(stmt!)
+            }
+        }
+        
+        let _ = try consume(type: TokenType.right_brace, message: "Expect '}' after a block.")
+        return statements
     }
     
     func declaration() throws -> Stmt? {
