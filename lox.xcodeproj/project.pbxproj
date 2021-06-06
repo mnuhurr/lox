@@ -10,6 +10,9 @@
 		FD9999F0266BE25B00B1AF6B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9999EF266BE25B00B1AF6B /* main.swift */; };
 		FD9999F7266BE28C00B1AF6B /* interpreter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9999F6266BE28C00B1AF6B /* interpreter.swift */; };
 		FD9999F9266BEA6B00B1AF6B /* lexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9999F8266BEA6B00B1AF6B /* lexer.swift */; };
+		FD9999FB266CC2F100B1AF6B /* ast.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9999FA266CC2F100B1AF6B /* ast.swift */; };
+		FD9999FD266CCD8D00B1AF6B /* parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9999FC266CCD8D00B1AF6B /* parser.swift */; };
+		FD9999FF266CE1D100B1AF6B /* token.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9999FE266CE1D100B1AF6B /* token.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -29,6 +32,9 @@
 		FD9999EF266BE25B00B1AF6B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FD9999F6266BE28C00B1AF6B /* interpreter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = interpreter.swift; sourceTree = "<group>"; };
 		FD9999F8266BEA6B00B1AF6B /* lexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = lexer.swift; sourceTree = "<group>"; };
+		FD9999FA266CC2F100B1AF6B /* ast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ast.swift; sourceTree = "<group>"; };
+		FD9999FC266CCD8D00B1AF6B /* parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = parser.swift; sourceTree = "<group>"; };
+		FD9999FE266CE1D100B1AF6B /* token.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = token.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +70,9 @@
 				FD9999EF266BE25B00B1AF6B /* main.swift */,
 				FD9999F6266BE28C00B1AF6B /* interpreter.swift */,
 				FD9999F8266BEA6B00B1AF6B /* lexer.swift */,
+				FD9999FA266CC2F100B1AF6B /* ast.swift */,
+				FD9999FC266CCD8D00B1AF6B /* parser.swift */,
+				FD9999FE266CE1D100B1AF6B /* token.swift */,
 			);
 			path = lox;
 			sourceTree = "<group>";
@@ -125,8 +134,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FD9999FB266CC2F100B1AF6B /* ast.swift in Sources */,
 				FD9999F7266BE28C00B1AF6B /* interpreter.swift in Sources */,
 				FD9999F9266BEA6B00B1AF6B /* lexer.swift in Sources */,
+				FD9999FF266CE1D100B1AF6B /* token.swift in Sources */,
+				FD9999FD266CCD8D00B1AF6B /* parser.swift in Sources */,
 				FD9999F0266BE25B00B1AF6B /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
