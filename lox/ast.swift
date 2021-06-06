@@ -10,14 +10,14 @@
 import Foundation
 
 protocol Expr {
-    func accept(visitor: Visitor)
+    func accept(visitor: Visitor) throws -> Any?
 }
 
 protocol Visitor {
-    func visitBinaryExpr(binary: LoxAst.Binary)
-    func visitGroupingExpr(grouping: LoxAst.Grouping)
-    func visitLiteralExpr(literal: LoxAst.Literal)
-    func visitUnary(literal: LoxAst.Unary)
+    func visitBinaryExpr(binary: LoxAst.Binary) throws -> Any?
+    func visitGroupingExpr(grouping: LoxAst.Grouping) throws -> Any?
+    func visitLiteralExpr(literal: LoxAst.Literal) throws -> Any?
+    func visitUnary(unary: LoxAst.Unary) throws -> Any?
 }
 
 struct LoxAst {
@@ -35,8 +35,8 @@ struct LoxAst {
             self.right = right
         }
         
-        func accept(visitor: Visitor) {
-            visitor.visitBinaryExpr(binary: self)
+        func accept(visitor: Visitor) throws -> Any? {
+            return try visitor.visitBinaryExpr(binary: self)
         }
     }
     
@@ -47,8 +47,8 @@ struct LoxAst {
             self.expr = expr
         }
         
-        func accept(visitor: Visitor) {
-            visitor.visitGroupingExpr(grouping: self)
+        func accept(visitor: Visitor) throws -> Any? {
+            return try visitor.visitGroupingExpr(grouping: self)
         }
     }
     
@@ -59,8 +59,8 @@ struct LoxAst {
             self.value = value
         }
         
-        func accept(visitor: Visitor) {
-            visitor.visitLiteralExpr(literal: self)
+        func accept(visitor: Visitor) throws -> Any? {
+            return try visitor.visitLiteralExpr(literal: self)
         }
     }
     
@@ -73,8 +73,8 @@ struct LoxAst {
             self.right = right
         }
         
-        func accept(visitor: Visitor) {
-            visitor.visitUnary(literal: self)
+        func accept(visitor: Visitor) throws -> Any? {
+            return try visitor.visitUnary(unary: self)
         }
     }
 }

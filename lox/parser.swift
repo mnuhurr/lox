@@ -67,7 +67,7 @@ class Parser {
     }
     
     func error(token: Token, message: String) -> ParserError {
-        Interpreter.error(token: token, message: message)
+        Lox.error(token: token, message: message)
         return ParserError.ParseError(token: token, message: message)
     }
     

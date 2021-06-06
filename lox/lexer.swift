@@ -137,7 +137,7 @@ class Lexer {
                 }
             
             } else {
-                Interpreter.error(line: line, message: "Unexpected character.")
+                Lox.error(line: line, message: "Unexpected character.")
             }
         }
         
@@ -191,7 +191,7 @@ class Lexer {
         }
         
         if isAtEnd() {
-            Interpreter.error(line: line, message: "Unterminated string.")
+            Lox.error(line: line, message: "Unterminated string.")
             return nil
         }
         
@@ -220,7 +220,7 @@ class Lexer {
         if let value = Double(number_str) {
             return value
         } else {
-            Interpreter.error(line: line, message: "Error in number parsing (this shouldn't happen!)")
+            Lox.error(line: line, message: "Error in number parsing (this shouldn't happen!)")
             return 0;
         }
     }

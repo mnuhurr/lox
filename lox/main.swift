@@ -10,7 +10,7 @@
 import Foundation
 
 func main() -> Int32 {
-    var interpreter: Interpreter = Interpreter()
+    let lox: Lox = Lox()
 
     if CommandLine.arguments.capacity > 2 {
         print("Usage: lox [script]")
@@ -20,8 +20,8 @@ func main() -> Int32 {
         
         do {
             let source = try String(contentsOfFile: file, encoding: .utf8)
-            interpreter.run(source: source)
-            if interpreter.hadError {
+            lox.run(source: source)
+            if lox.hadError {
                 return 65; // EX_DATAERR
             }
         } catch {
@@ -32,8 +32,8 @@ func main() -> Int32 {
         // run interactive
         print("> ", terminator:"")
         while let line = readLine() {
-            interpreter.run(source: line)
-            interpreter.hadError = false
+            lox.run(source: line)
+            lox.hadError = false
             print("> ", terminator:"")
         }
     }
