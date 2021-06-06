@@ -11,14 +11,14 @@ enum InterpreterError : Error {
     case RuntimeError(token: Token, message: String)
 }
 
-class Interpreter: Visitor {
+class Interpreter: ExprVisitor, StmtVisitor {
     var hadRuntimeError: Bool = false
     
-    func interpret(expr: Expr) {
+    func interpret(statements: [Stmt]) {
+        
         do {
-            let value = try evaluate(expr: expr)
-            if value != nil {
-                print(value!)
+            for statement in statements {
+                let _ = try execute(stmt: statement)
             }
         } catch InterpreterError.RuntimeError(let token, let message) {
             Lox.error(token: token, message: message)
@@ -26,6 +26,11 @@ class Interpreter: Visitor {
         } catch {
             print("An unknown error occurred: \(error)")
         }
+        
+    }
+    
+    func execute(stmt: Stmt) throws -> Any? {
+        return try stmt.accept(visitor: self)
     }
     
     func evaluate(expr: Expr) throws -> Any? {
@@ -98,6 +103,10 @@ class Interpreter: Visitor {
                 
                 if str_left != nil && str_right != nil {
                     return str_left! + str_right!
+                } else if d_left != nil && str_right != nil {
+                    return String(d_left!) + str_right!
+                } else if str_left != nil && d_right != nil {
+                    return str_left! + String(d_right!)
                 } else {
                     throw InterpreterError.RuntimeError(token: binary.op, message: "Operands must be two numbers or two strings.")
                 }
@@ -192,4 +201,23 @@ class Interpreter: Visitor {
         return false
     }
     
+    func visitPrintStmt(printStmt: LoxAst.Print) throws -> Any? {
+        let value = try evaluate(expr: printStmt.expr)
+        
+        if value == nil {
+            return nil
+        }
+        
+        if let strval = value as? String {
+            print(strval)
+        } else if let dblval = value as? Double {
+            print(String(dblval))
+        }
+        
+        return nil
+    }
+    
+    func visitExprStmt(exprStmt: LoxAst.Expression) throws  -> Any? {
+        return try evaluate(expr: exprStmt.expr)
+    }
 }

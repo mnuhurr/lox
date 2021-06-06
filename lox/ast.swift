@@ -10,14 +10,23 @@
 import Foundation
 
 protocol Expr {
-    func accept(visitor: Visitor) throws -> Any?
+    func accept(visitor: ExprVisitor) throws -> Any?
 }
 
-protocol Visitor {
+protocol Stmt {
+    func accept(visitor: StmtVisitor) throws -> Any?
+}
+
+protocol ExprVisitor {
     func visitBinaryExpr(binary: LoxAst.Binary) throws -> Any?
     func visitGroupingExpr(grouping: LoxAst.Grouping) throws -> Any?
     func visitLiteralExpr(literal: LoxAst.Literal) throws -> Any?
     func visitUnary(unary: LoxAst.Unary) throws -> Any?
+}
+
+protocol StmtVisitor {
+    func visitPrintStmt(printStmt: LoxAst.Print) throws -> Any?
+    func visitExprStmt(exprStmt: LoxAst.Expression) throws -> Any?
 }
 
 struct LoxAst {
@@ -35,7 +44,7 @@ struct LoxAst {
             self.right = right
         }
         
-        func accept(visitor: Visitor) throws -> Any? {
+        func accept(visitor: ExprVisitor) throws -> Any? {
             return try visitor.visitBinaryExpr(binary: self)
         }
     }
@@ -47,7 +56,7 @@ struct LoxAst {
             self.expr = expr
         }
         
-        func accept(visitor: Visitor) throws -> Any? {
+        func accept(visitor: ExprVisitor) throws -> Any? {
             return try visitor.visitGroupingExpr(grouping: self)
         }
     }
@@ -59,7 +68,7 @@ struct LoxAst {
             self.value = value
         }
         
-        func accept(visitor: Visitor) throws -> Any? {
+        func accept(visitor: ExprVisitor) throws -> Any? {
             return try visitor.visitLiteralExpr(literal: self)
         }
     }
@@ -73,8 +82,32 @@ struct LoxAst {
             self.right = right
         }
         
-        func accept(visitor: Visitor) throws -> Any? {
+        func accept(visitor: ExprVisitor) throws -> Any? {
             return try visitor.visitUnary(unary: self)
+        }
+    }
+    
+    class Expression: Stmt {
+        let expr: Expr
+        
+        init(expr: Expr) {
+            self.expr = expr
+        }
+        
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitExprStmt(exprStmt: self)
+        }
+    }
+    
+    class Print: Stmt {
+        let expr: Expr
+        
+        init(expr: Expr) {
+            self.expr = expr
+        }
+        
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitPrintStmt(printStmt: self)
         }
     }
 }

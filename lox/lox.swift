@@ -39,13 +39,15 @@ class Lox {
     func run(source: String) {
         let lexer = Lexer(source: source)
         let tokens = lexer.scanTokens()
-        let parser = Parser(tokens: tokens)
-        let expr = parser.parse()
         
-        if hadError || expr == nil {
+        let parser = Parser(tokens: tokens)
+        let statements = parser.parse()
+        
+        if hadError {
             return
         }
         
-        interpreter.interpret(expr: expr!)
+        interpreter.interpret(statements: statements)
+        
     }
 }

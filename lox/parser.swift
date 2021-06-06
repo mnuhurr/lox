@@ -2,6 +2,8 @@
 //  parser.swift
 //  lox
 //
+//  Parse tokens and construct an AST
+//
 //  Created by Manu Harju on 6.6.2021.
 //
 
@@ -152,12 +154,38 @@ class Parser {
         throw error(token: peek(), message: "Expect expression.")
     }
     
-    func parse() -> Expr? {
-        do {
-            let expr = try expression()
-            return expr
-        } catch {
-            return nil
+    func statement() throws -> Stmt {
+        if match(TokenType.kw_print) {
+            return try printStatement()
         }
+        
+        return try expressionStatement()
+    }
+    
+    func printStatement() throws -> Stmt {
+        let value: Expr = try expression()
+        let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after value.")
+        return LoxAst.Print(expr: value)
+    }
+    
+    func expressionStatement() throws -> Stmt {
+        let expr: Expr = try expression()
+        let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after value.")
+        return LoxAst.Expression(expr: expr)
+    }
+    
+    func parse() -> [Stmt] {
+        var statements: [Stmt] = []
+        
+        while (!isAtEnd()) {
+            let stmt = try? statement()
+            if stmt != nil {
+                statements.append(stmt!)
+            } else {
+                // wat do
+            }
+        }
+        
+        return statements
     }
 }
