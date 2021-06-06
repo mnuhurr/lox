@@ -13,6 +13,7 @@ enum InterpreterError : Error {
 
 class Interpreter: ExprVisitor, StmtVisitor {
     var hadRuntimeError: Bool = false
+    var environment: Environment = Environment()
     
     func interpret(statements: [Stmt]) {
         
@@ -45,7 +46,7 @@ class Interpreter: ExprVisitor, StmtVisitor {
         return try evaluate(expr: grouping.expr)
     }
 
-    func visitUnary(unary: LoxAst.Unary) throws -> Any? {
+    func visitUnaryExpr(unary: LoxAst.Unary) throws -> Any? {
         let right = try evaluate(expr: unary.right)
 
         switch unary.op.type {
@@ -154,6 +155,10 @@ class Interpreter: ExprVisitor, StmtVisitor {
         return nil
     }
     
+    func visitVariable(variable: LoxAst.Variable) throws -> Any? {
+        return try environment.get(name: variable.name)
+    }
+    
     func isTruthy(object: Any?) -> Bool {
         // check if object == 0 ???
         if object == nil {
@@ -201,7 +206,7 @@ class Interpreter: ExprVisitor, StmtVisitor {
         return false
     }
     
-    func visitPrintStmt(printStmt: LoxAst.Print) throws -> Any? {
+    func visitPrintStmt(printStmt: LoxAst.PrintStmt) throws -> Any? {
         let value = try evaluate(expr: printStmt.expr)
         
         if value == nil {
@@ -212,12 +217,25 @@ class Interpreter: ExprVisitor, StmtVisitor {
             print(strval)
         } else if let dblval = value as? Double {
             print(String(dblval))
+        } else if let bval = value as? Bool {
+            print(String(bval))
         }
         
         return nil
     }
     
-    func visitExprStmt(exprStmt: LoxAst.Expression) throws  -> Any? {
+    func visitExprStmt(exprStmt: LoxAst.ExpressionStmt) throws -> Any? {
         return try evaluate(expr: exprStmt.expr)
+    }
+    
+    func visitVarStmt(varStmt: LoxAst.VarStmt) throws -> Any? {
+        var value: Any? = nil
+        
+        if varStmt.initializer != nil {
+            value = try evaluate(expr: varStmt.initializer!)
+        }
+        
+        environment.define(name: varStmt.name.lexeme, value: value)
+        return nil
     }
 }

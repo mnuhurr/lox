@@ -144,13 +144,17 @@ class Parser {
             return LoxAst.Literal(value: previous().literal)
         }
         
+        if match(TokenType.identifier) {
+            return LoxAst.Variable(name: previous())
+        }
+        
         if match(TokenType.left_paren) {
             let expr = try expression()
             let _ = try consume(type: TokenType.right_paren, message: "Expect ')' after an expression.")
             return LoxAst.Grouping(expr: expr)
         }
         
-        // this shouldn't happen
+        // this shouldn't happen ?
         throw error(token: peek(), message: "Expect expression.")
     }
     
@@ -165,20 +169,46 @@ class Parser {
     func printStatement() throws -> Stmt {
         let value: Expr = try expression()
         let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after value.")
-        return LoxAst.Print(expr: value)
+        return LoxAst.PrintStmt(expr: value)
     }
     
     func expressionStatement() throws -> Stmt {
         let expr: Expr = try expression()
         let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after value.")
-        return LoxAst.Expression(expr: expr)
+        return LoxAst.ExpressionStmt(expr: expr)
+    }
+    
+    func declaration() throws -> Stmt? {
+        do {
+            if match(TokenType.kw_var) {
+                return try varDeclaration()
+            }
+            
+            return try statement()
+            
+        } catch {
+            synchronize()
+        }
+        return nil
+    }
+    
+    func varDeclaration() throws -> Stmt {
+        let name: Token? = try consume(type: TokenType.identifier, message: "Expect variable name.")
+        var initializer: Expr? = nil
+        
+        if match(TokenType.equal) {
+            initializer = try expression()
+        }
+        
+        let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after variable declaration.")
+        return LoxAst.VarStmt(name: name!, initializer: initializer)
     }
     
     func parse() -> [Stmt] {
         var statements: [Stmt] = []
         
         while (!isAtEnd()) {
-            let stmt = try? statement()
+            let stmt = try? declaration()
             if stmt != nil {
                 statements.append(stmt!)
             } else {
@@ -187,5 +217,25 @@ class Parser {
         }
         
         return statements
+    }
+    
+    // find the start of the next statement
+    func synchronize() {
+        let _ = advance()
+        
+        while !isAtEnd() {
+            if previous().type == TokenType.semicolon {
+                return
+            }
+            
+            switch peek().type {
+            case TokenType.kw_class, TokenType.kw_fun, TokenType.kw_var, TokenType.kw_for, TokenType.kw_if,
+                 TokenType.kw_while, TokenType.kw_print, TokenType.kw_return:
+                return;
+                
+            default:
+                let _ = advance()
+            }
+        }
     }
 }

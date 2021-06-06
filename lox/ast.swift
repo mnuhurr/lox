@@ -21,12 +21,14 @@ protocol ExprVisitor {
     func visitBinaryExpr(binary: LoxAst.Binary) throws -> Any?
     func visitGroupingExpr(grouping: LoxAst.Grouping) throws -> Any?
     func visitLiteralExpr(literal: LoxAst.Literal) throws -> Any?
-    func visitUnary(unary: LoxAst.Unary) throws -> Any?
+    func visitUnaryExpr(unary: LoxAst.Unary) throws -> Any?
+    func visitVariable(variable: LoxAst.Variable) throws -> Any?
 }
 
 protocol StmtVisitor {
-    func visitPrintStmt(printStmt: LoxAst.Print) throws -> Any?
-    func visitExprStmt(exprStmt: LoxAst.Expression) throws -> Any?
+    func visitPrintStmt(printStmt: LoxAst.PrintStmt) throws -> Any?
+    func visitExprStmt(exprStmt: LoxAst.ExpressionStmt) throws -> Any?
+    func visitVarStmt(varStmt: LoxAst.VarStmt) throws -> Any?
 }
 
 struct LoxAst {
@@ -83,11 +85,23 @@ struct LoxAst {
         }
         
         func accept(visitor: ExprVisitor) throws -> Any? {
-            return try visitor.visitUnary(unary: self)
+            return try visitor.visitUnaryExpr(unary: self)
         }
     }
     
-    class Expression: Stmt {
+    class Variable: Expr {
+        let name: Token
+        
+        init(name: Token) {
+            self.name = name
+        }
+        
+        func accept(visitor: ExprVisitor) throws -> Any? {
+            return try visitor.visitVariable(variable: self)
+        }
+    }
+    
+    class ExpressionStmt: Stmt {
         let expr: Expr
         
         init(expr: Expr) {
@@ -99,7 +113,7 @@ struct LoxAst {
         }
     }
     
-    class Print: Stmt {
+    class PrintStmt: Stmt {
         let expr: Expr
         
         init(expr: Expr) {
@@ -108,6 +122,20 @@ struct LoxAst {
         
         func accept(visitor: StmtVisitor) throws -> Any? {
             return try visitor.visitPrintStmt(printStmt: self)
+        }
+    }
+    
+    class VarStmt: Stmt {
+        let name: Token
+        let initializer: Expr?
+        
+        init(name: Token, initializer: Expr?) {
+            self.name = name
+            self.initializer = initializer
+        }
+        
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitVarStmt(varStmt: self)
         }
     }
 }
