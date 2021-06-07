@@ -9,11 +9,22 @@ import Foundation
 
 enum InterpreterError : Error {
     case RuntimeError(token: Token, message: String)
+    case Return(value: Any?)
+}
+
+protocol Callable {
+    func arity() -> Int
+    func call(interpreter: Interpreter, args: [Any?]) throws -> Any?
 }
 
 class Interpreter: ExprVisitor, StmtVisitor {
     var hadRuntimeError: Bool = false
-    var environment: Environment = Environment()
+    let globals: Environment = Environment()
+    var environment: Environment
+    
+    init() {
+        environment = globals
+    }
     
     func interpret(statements: [Stmt]) {
         
@@ -46,6 +57,27 @@ class Interpreter: ExprVisitor, StmtVisitor {
         return try evaluate(expr: grouping.expr)
     }
 
+    func visitCallExpr(call: LoxAst.Call) throws -> Any? {
+        let callee = try evaluate(expr: call.callee)
+        
+        var args: [Any?] = []
+        
+        for arg in call.args {
+            args.append(try evaluate(expr: arg))
+        }
+        
+        if let function = callee as? Callable {
+            if args.count != function.arity() {
+                throw InterpreterError.RuntimeError(token: call.paren, message:
+                                                        "Expected \(function.arity()) arguments but got \(args.count).")
+            }
+            
+            return try function.call(interpreter: self, args: args)
+        } else {
+            throw InterpreterError.RuntimeError(token: call.paren, message: "Can only call functions and classes.")
+        }
+    }
+    
     func visitUnaryExpr(unary: LoxAst.Unary) throws -> Any? {
         let right = try evaluate(expr: unary.right)
 
@@ -59,7 +91,7 @@ class Interpreter: ExprVisitor, StmtVisitor {
             }
             
         case TokenType.bang:
-            return !isTruthy(object: right)
+            return !isTruthy(right)
             
         default:
             return nil
@@ -161,11 +193,27 @@ class Interpreter: ExprVisitor, StmtVisitor {
         return nil
     }
     
+    func visitLogicalExpr(logical: LoxAst.Logical) throws -> Any? {
+        let left = try evaluate(expr: logical.left)
+        
+        if logical.op.type == TokenType.kw_or {
+            if isTruthy(left) {
+                return left
+            }
+        } else {
+            if !isTruthy(left) {
+                return left
+            }
+        }
+        
+        return try evaluate(expr: logical.right)
+    }
+        
     func visitVariable(variable: LoxAst.Variable) throws -> Any? {
         return try environment.get(name: variable.name)
     }
     
-    func isTruthy(object: Any?) -> Bool {
+    func isTruthy(_ object: Any?) -> Bool {
         // check if object == 0 ???
         if object == nil {
             return false
@@ -246,22 +294,54 @@ class Interpreter: ExprVisitor, StmtVisitor {
     }
     
     func visitBlock(block: LoxAst.Block) throws -> Any? {
-        executeBlock(statements: block.statements, environment: Environment(enclosing: environment))
+        try executeBlock(statements: block.statements, environment: Environment(enclosing: environment))
         return nil
     }
     
-    func executeBlock(statements: [Stmt], environment: Environment) {
+    func executeBlock(statements: [Stmt], environment: Environment) throws {
         let previous: Environment = self.environment
         
-        do {
-            self.environment = environment
-            for stmt in statements {
-                let _ = try execute(stmt: stmt)
-            }
-        } catch {
-            // ??
+        self.environment = environment
+        defer {
+            self.environment = previous
+        }
+
+        for stmt in statements {
+            let _ = try execute(stmt: stmt)
         }
         
-        self.environment = previous
+    }
+    
+    func visitIfStmt(ifStmt: LoxAst.IfStmt) throws -> Any? {
+        if isTruthy(try evaluate(expr: ifStmt.condition)) {
+            return try execute(stmt: ifStmt.thenBranch)
+        } else if ifStmt.elseBranch != nil {
+            return try execute(stmt: ifStmt.elseBranch!)
+        }
+        
+        return nil
+    }
+    
+    func visitWhileStmt(whileStmt: LoxAst.WhileStmt) throws -> Any? {
+        while isTruthy(try evaluate(expr: whileStmt.condition)) {
+            let _ = try execute(stmt: whileStmt.body)
+        }
+        return nil
+    }
+    
+    func visitFuncStmt(funcStmt: LoxAst.FuncStmt) throws -> Any? {
+        let function = Function(declaration: funcStmt)
+        environment.define(name: funcStmt.name.lexeme, value: function)
+        return nil
+    }
+    
+    func visitReturnStmt(returnStmt: LoxAst.ReturnStmt) throws -> Any? {
+        var value: Any? = nil
+        
+        if let return_expr = returnStmt.value {
+            value = try evaluate(expr: return_expr)
+        }
+        
+        throw InterpreterError.Return(value: value)
     }
 }

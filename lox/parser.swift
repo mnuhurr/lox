@@ -60,7 +60,7 @@ class Parser {
         return peek().type == type
     }
     
-    func consume(type: TokenType, message: String) throws -> Token? {
+    func consume(type: TokenType, message: String) throws -> Token {
         if check(type: type) {
             return advance()
         }
@@ -78,7 +78,7 @@ class Parser {
     }
     
     func assignment() throws -> Expr {
-        let expr = try equality()
+        let expr = try or()
         
         if match(TokenType.equal) {
             let equals = previous()
@@ -95,6 +95,30 @@ class Parser {
         return expr
     }
     
+    func or() throws -> Expr {
+        var expr = try and()
+        
+        while match(TokenType.kw_or) {
+            let op = previous()
+            let right = try and()
+            expr = LoxAst.Logical(left: expr, op: op, right: right)
+        }
+        
+        return expr
+    }
+    
+    func and() throws -> Expr {
+        var expr = try equality()
+        
+        while match(TokenType.kw_and) {
+            let op = previous()
+            let right = try equality()
+            expr = LoxAst.Logical(left: expr, op: op, right: right)
+        }
+        
+        return expr
+    }
+
     func equality() throws -> Expr {
         var expr = try comparison()
         
@@ -150,9 +174,44 @@ class Parser {
             return LoxAst.Unary(op: op, right: right)
         }
         
-        return try primary()
+        return try call()
     }
     
+    func call() throws -> Expr {
+        var expr = try primary()
+        
+        while true {
+            if match(TokenType.left_paren) {
+                expr = try finishCall(callee: expr)
+            } else {
+                break
+            }
+        }
+        
+        return expr
+    }
+    
+    func finishCall(callee: Expr) throws -> Expr {
+        var args: [Expr] = []
+        
+        // not the most elegant way of parsing the argument list
+        if !check(type: TokenType.right_paren) {
+            args.append(try expression())
+            
+            while match(TokenType.comma) {
+                args.append(try expression())
+                
+                if args.count >= 255 {
+                    let _ = error(token: peek(), message: "Can't have more than 255 arguments.")
+                }
+            }
+        }
+        
+        let paren = try consume(type: TokenType.right_paren, message: "Expect ')' after arguments.")
+        
+        return LoxAst.Call(callee: callee, paren: paren, args: args)
+    }
+
     func primary() throws -> Expr {
         if match(TokenType.kw_false)    { return LoxAst.Literal(value: false) }
         if match(TokenType.kw_true)     { return LoxAst.Literal(value: true) }
@@ -177,8 +236,24 @@ class Parser {
     }
     
     func statement() throws -> Stmt {
+        if match(TokenType.kw_if) {
+            return try ifStatement()
+        }
+        
         if match(TokenType.kw_print) {
             return try printStatement()
+        }
+        
+        if match(TokenType.kw_return) {
+            return try returnStatement()
+        }
+        
+        if match(TokenType.kw_while) {
+            return try whileStatement()
+        }
+        
+        if match(TokenType.kw_for) {
+            return try forStatement()
         }
         
         if match(TokenType.left_brace) {
@@ -201,6 +276,80 @@ class Parser {
         return LoxAst.ExpressionStmt(expr: expr)
     }
     
+    func ifStatement() throws -> Stmt {
+        let _ = try consume(type: TokenType.left_paren, message: "Expect '(' after 'if'.")
+        let condition = try expression()
+        let _ = try consume(type: TokenType.right_paren, message: "Expect ')' after if condition.")
+        
+        let thenBranch = try statement()
+        var elseBranch: Stmt? = nil
+        if match(TokenType.kw_else) {
+            elseBranch = try statement()
+        }
+        
+        return LoxAst.IfStmt(condition: condition, thenBranch: thenBranch, elseBranch: elseBranch)
+    }
+    
+    func whileStatement() throws -> Stmt {
+        let _ = try consume(type: TokenType.left_paren, message: "Expect '(' after 'while'.")
+        let condition = try expression()
+        let _ = try consume(type: TokenType.right_paren, message: "Expect ')' after condition.")
+        let body = try statement()
+        
+        return LoxAst.WhileStmt(condition: condition, body: body)
+    }
+    
+    func forStatement() throws -> Stmt {
+        // parse and convert for into while
+        let _ = try consume(type: TokenType.left_paren, message: "Expect '(' after 'for'.")
+        
+        // parse: for (initializer; condition; increment) { ... }
+        
+        // 1. initializer
+        var initializer: Stmt?
+        
+        if match(TokenType.semicolon) {
+            initializer = nil
+        } else if match(TokenType.kw_var) {
+            initializer = try varDeclaration()
+        } else {
+            initializer = try expressionStatement()
+        }
+        
+        // 2. condition
+        var condition: Expr? = nil
+        if !check(type: TokenType.semicolon) {
+            condition = try expression()
+        }
+        let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after loop condition.")
+        
+        // 3. increment
+        var increment: Expr? = nil
+        if !check(type: TokenType.right_paren) {
+            increment = try expression()
+        }
+        let _ = try consume(type: TokenType.right_paren, message: "Expect ')' after for clause.")
+        var body = try statement()
+
+        // start converting/syntax desugaring
+        if increment != nil {
+            body = LoxAst.Block(statements: [body, LoxAst.ExpressionStmt(expr: increment!)])
+        }
+        
+        if condition == nil {
+            condition = LoxAst.Literal(value: true)
+        }
+                
+        body = LoxAst.WhileStmt(condition: condition!, body: body)
+
+        // if there is an initializer, add it before everything
+        if initializer != nil {
+            body = LoxAst.Block(statements: [initializer!, body])
+        }
+
+        return body
+    }
+    
     func block() throws -> [Stmt] {
         var statements: [Stmt] = []
         
@@ -217,6 +366,10 @@ class Parser {
     
     func declaration() throws -> Stmt? {
         do {
+            if match(TokenType.kw_fun) {
+                return try function(kind: "function")
+            }
+            
             if match(TokenType.kw_var) {
                 return try varDeclaration()
             }
@@ -227,6 +380,44 @@ class Parser {
             synchronize()
         }
         return nil
+    }
+    
+    func function(kind: String) throws -> LoxAst.FuncStmt {
+        let name = try consume(type: TokenType.identifier, message: "Expect \(kind) name.")
+        
+        let _ = try consume(type: TokenType.left_paren, message: "Expect '(' after \(kind) name")
+        
+        var params: [Token] = []
+        if !check(type: TokenType.right_paren) {
+            params.append(try consume(type: TokenType.identifier, message: "Expect parameter name."))
+            
+            while match(TokenType.comma) {
+                params.append(try consume(type: TokenType.identifier, message: "Expect parameter name."))
+                
+                if params.count >= 255 {
+                    let _ = error(token: peek(), message: "Can't have more than 255 params.")
+                }
+            }
+        }
+        
+        let _ = try consume(type: TokenType.right_paren, message: "Expect ')' after parameters.")
+        
+        // function body
+        let _ = try consume(type: TokenType.left_brace, message: "Expect '{' before \(kind) body.")
+        let body = try block()
+        return LoxAst.FuncStmt(name: name, params: params, body: body)
+    }
+    
+    func returnStatement() throws -> Stmt {
+        let keyword = previous()
+        var value: Expr? = nil
+        
+        if !check(type: TokenType.semicolon) {
+            value = try expression()
+        }
+        
+        let _ = try consume(type: TokenType.semicolon, message: "Expect ';' after return value.")
+        return LoxAst.ReturnStmt(keyword: keyword, value: value)
     }
     
     func varDeclaration() throws -> Stmt {

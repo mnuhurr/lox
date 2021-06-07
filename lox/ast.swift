@@ -20,8 +20,10 @@ protocol Stmt {
 protocol ExprVisitor {
     func visitAssignExpr(assign: LoxAst.Assign) throws -> Any?
     func visitBinaryExpr(binary: LoxAst.Binary) throws -> Any?
+    func visitCallExpr(call: LoxAst.Call) throws -> Any?
     func visitGroupingExpr(grouping: LoxAst.Grouping) throws -> Any?
     func visitLiteralExpr(literal: LoxAst.Literal) throws -> Any?
+    func visitLogicalExpr(logical: LoxAst.Logical) throws -> Any?
     func visitUnaryExpr(unary: LoxAst.Unary) throws -> Any?
     func visitVariable(variable: LoxAst.Variable) throws -> Any?
 }
@@ -31,6 +33,10 @@ protocol StmtVisitor {
     func visitPrintStmt(printStmt: LoxAst.PrintStmt) throws -> Any?
     func visitExprStmt(exprStmt: LoxAst.ExpressionStmt) throws -> Any?
     func visitVarStmt(varStmt: LoxAst.VarStmt) throws -> Any?
+    func visitIfStmt(ifStmt: LoxAst.IfStmt) throws -> Any?
+    func visitWhileStmt(whileStmt: LoxAst.WhileStmt) throws -> Any?
+    func visitFuncStmt(funcStmt: LoxAst.FuncStmt) throws -> Any?
+    func visitReturnStmt(returnStmt: LoxAst.ReturnStmt) throws -> Any?
 }
 
 struct LoxAst {
@@ -67,6 +73,22 @@ struct LoxAst {
         }
     }
     
+    class Call: Expr {
+        let callee: Expr
+        let paren: Token
+        let args: [Expr]
+        
+        init(callee: Expr, paren: Token, args: [Expr]) {
+            self.callee = callee
+            self.paren = paren
+            self.args = args
+        }
+        
+        func accept(visitor: ExprVisitor) throws -> Any? {
+            return try visitor.visitCallExpr(call: self)
+        }
+    }
+    
     class Grouping: Expr {
         let expr: Expr
         
@@ -88,6 +110,22 @@ struct LoxAst {
         
         func accept(visitor: ExprVisitor) throws -> Any? {
             return try visitor.visitLiteralExpr(literal: self)
+        }
+    }
+    
+    class Logical: Expr {
+        let left: Expr
+        let op: Token
+        let right: Expr
+        
+        init(left: Expr, op: Token, right: Expr) {
+            self.left = left
+            self.op = op
+            self.right = right
+        }
+        
+        func accept(visitor: ExprVisitor) throws -> Any? {
+            return try visitor.visitLogicalExpr(logical: self)
         }
     }
     
@@ -164,6 +202,66 @@ struct LoxAst {
         
         func accept(visitor: StmtVisitor) throws -> Any? {
             return try visitor.visitVarStmt(varStmt: self)
+        }
+    }
+    
+    class IfStmt: Stmt {
+        let condition: Expr
+        let thenBranch: Stmt
+        let elseBranch: Stmt?
+        
+        init(condition: Expr, thenBranch: Stmt, elseBranch: Stmt?) {
+            self.condition = condition
+            self.thenBranch = thenBranch
+            self.elseBranch = elseBranch
+        }
+        
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitIfStmt(ifStmt: self)
+        }
+    }
+    
+    class WhileStmt: Stmt {
+        let condition: Expr
+        let body: Stmt
+        
+        init(condition: Expr, body: Stmt) {
+            self.condition = condition
+            self.body = body
+        }
+        
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitWhileStmt(whileStmt: self)
+        }
+    }
+
+    class FuncStmt: Stmt {
+        let name: Token
+        let params: [Token]
+        let body: [Stmt]
+        
+        init(name: Token, params: [Token], body: [Stmt]) {
+            self.name = name
+            self.params = params
+            self.body = body
+        }
+
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitFuncStmt(funcStmt: self)
+        }
+    }
+    
+    class ReturnStmt: Stmt {
+        let keyword: Token
+        let value: Expr?
+        
+        init(keyword: Token, value: Expr?) {
+            self.keyword = keyword
+            self.value = value
+        }
+        
+        func accept(visitor: StmtVisitor) throws -> Any? {
+            return try visitor.visitReturnStmt(returnStmt: self)
         }
     }
 }
